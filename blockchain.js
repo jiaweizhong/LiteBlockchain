@@ -35,12 +35,12 @@ class Blockchain{
         }
 
         for(let i = 1; i < chain.length; i++){
-            const {timestamp, lastHash, hash, data} = chain[i];
+            const {timestamp, lastHash, hash, nouce, difficulty, data} = chain[i];
             const expLastHash = chain[i-1].hash;
             // each block lastHash equals last block hash
             if(lastHash !== expLastHash) return false;
             // each block hash should match SHA256
-            const expCurHash = cryptoHash(timestamp, lastHash, data);
+            const expCurHash = cryptoHash(timestamp, lastHash, data, nouce, difficulty);
             if(hash!==expCurHash) return false;
         }
     
