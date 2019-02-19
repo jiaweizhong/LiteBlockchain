@@ -35,7 +35,14 @@ class PubSub{
     }
     // publish message
     publish({channel, message}){
-        this.publisher.publish(channel, message);
+        this.subscriber.unsubscribe(channel, () => {
+            // unsubscribe to itself then publish
+            this.publisher.publish(channel, message, () => {
+                // subscribe back after publishing
+                this.subscriber.subscribe(channel);
+            });
+        });
+       
     }
     // blockchain should broadcast everytime a block is mined
     broadcastChain(){

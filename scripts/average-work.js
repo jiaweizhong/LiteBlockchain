@@ -1,6 +1,6 @@
 
 // script to compare the string vs binary for difficulty
-const Blockchain = require('./blockchain');
+const Blockchain = require('../blockchain');
 
 const blockchain = new Blockchain();
 
