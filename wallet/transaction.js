@@ -1,33 +1,47 @@
-const Transaction = require('./transaction');
-const Wallet = require('./index');
+const uuid = require('uuid/v1'); // use version 1
+const { verifySignature } = require('../util');
 
-describe('Transaction', () => {
-    let transaction, senderWallet, recipient, amount;
-    beforeEach(() => {
-        senderWallet = new Wallet();
-        recipient = 'recipient-public-key';
-        amount = 50;
-        transaction = new Transaction({senderWallet, recipient, amount});
-    });
+class Transaction {
+    constructor({senderWallet, recipient, amount}){
+        this.id = uuid();
+        this.outputMap = this.createOutputMap({senderWallet, recipient, amount});
+        this.input = this.createInput({ senderWallet, outputMap:this.outputMap});
+    }
 
-    it('has an `id`', () => {
-        expect(transaction).toHaveProperty('id');
-    });
+    createOutputMap({senderWallet, recipient, amount}){
+        const outputMap = {};
+        outputMap[recipient] = amount;
+        outputMap[senderWallet.publicKey] = senderWallet.balance - amount;
+        return outputMap;
+    }
 
-    describe('outputMap', () => {
-        it('has an `outputMap`', () => {
-            expect(transaction).toHaveProperty('outputMap');
-        });
+    createInput({ senderWallet, outputMap }){
+        return {
+            timestamp: Date.now(),
+            amount: senderWallet.balance,
+            address: senderWallet.publicKey,
+            signature: senderWallet.sign(outputMap)
+        };
+    }
 
-        it('outputs the amount to the recipient', () => {
-            expect(transaction.outputMap[recipient]).toEqual(amount);
-        });
+    static validTransaction(transaction) {
+        const { input:{ address, amount, signature }, outputMap } = transaction;
 
-        it('outputs the remaining balance of the wallet', () => {
-            expect(transaction.outputMap[senderWallet.publicKey])
-                .toEqual(senderWallet.balance - amount);
+        const outputTotal = Object.values(outputMap)
+        .reduce((total, outputAmount) => total + outputAmount);
 
-        });
-    });
+        if(amount !== outputTotal) {
+            console.error(`Invalid transaction from ${address}`);
+            return false;
+        }
 
-});
+        if(!verifySignature({publicKey:address, data:outputMap, signature})){
+            console.error(`Invalid transaction from ${address}`);
+            return false;
+        }
+
+        return true;
+    }
+}
+
+module.exports = Transaction;
