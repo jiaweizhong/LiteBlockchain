@@ -2,12 +2,14 @@ const redis = require('redis');
 
 const CHANNELS = {
     TEST: 'TEST',
-    BLOCKCHAIN: 'BLOCKCHAIN'
+    BLOCKCHAIN: 'BLOCKCHAIN',
+    TRANSACTION: 'TRANSACTION'
 }
 
 class PubSub{
-    constructor({blockchain}){
+    constructor({ blockchain, transactionPool }){
         this.blockchain = blockchain;
+        this.transactionPool = transactionPool;
         
         this.publisher = redis.createClient();
         this.subscriber = redis.createClient();
@@ -18,13 +20,26 @@ class PubSub{
             (channel, message) => this.handelMessage(channel, message)
         );
     }
-    // replace the blockchain if receive a valid blockchain
+
     handelMessage(channel, message){    
         console.log(`Message received. Channel: ${channel}. Message: ${message}.`);
         const parseMessage = JSON.parse(message); // parse blockchain info
-        if(channel=== CHANNELS.BLOCKCHAIN){
-            this.blockchain.replaceChain(parseMessage);
+
+        switch(channel){
+            case CHANNELS.BLOCKCHAIN: // replace the blockchain if receive a valid blockchain
+                this.blockchain.replaceChain(parseMessage, () => {
+                    this.transactionPool.clearBlockchainTransactions({
+                        chain: parseMessage
+                    });
+                });
+                break;
+            case CHANNELS.TRANSACTION: // set transaction if receive a transaction
+                this.transactionPool.setTransaction(parseMessage);
+                break;
+            default:
+                return;
         }
+
     }
 
     subscribeToChannel(){
@@ -49,6 +64,14 @@ class PubSub{
         this.publish({
             channel:  CHANNELS.BLOCKCHAIN,
             message: JSON.stringify(this.blockchain.chain)
+        });
+    }
+
+    // blockchain should broadcast transaction to the network
+    broadcastTransaction(transaction){
+        this.publish({
+            channel:  CHANNELS.TRANSACTION,
+            message: JSON.stringify(transaction)
         });
     }
 }
