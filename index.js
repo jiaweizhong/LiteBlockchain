@@ -1,6 +1,7 @@
 const bodyParser = require('body-parser');
 const express = require('express');
 const request = require('request');
+const path = require('path');
 const Blockchain = require('./blockchain');
 const PubSub = require('./app/pubsub');
 const TransactionMiner = require('./app/transaction-miner');
@@ -20,11 +21,15 @@ const DEFAULT_PORT = 3000;
 const ROOT_NODE_ADDRESS = `http://localhost:${DEFAULT_PORT}`;
 
 app.use(bodyParser.json());
+// adding middleware to allow access to all js files
+app.use(express.static(path.join(__dirname, 'client')));
+
 // get response
 app.get('/api/blocks', (req, res) => {
     // send back a blockchain
     res.json(blockchain.chain);
 });
+
 // post data
 app.post('/api/mine', (req, res) => {
     // get data from user req
@@ -34,6 +39,20 @@ app.post('/api/mine', (req, res) => {
     pubsub.broadcastChain();
 
     res.redirect('/api/blocks');
+});
+
+// get wallet info
+app.get('/api/wallet-info', (req, res) => {
+    const address = wallet.publicKey
+
+    res.json({
+        address,
+        balance: Walllet.calculateBalance({chain:blockchain.chain, address: wallet.publicKey})
+    });
+});
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname,'client/dist/index.html'));
 });
 
 // create transaction

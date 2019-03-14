@@ -27,7 +27,7 @@ class PubSub{
 
         switch(channel){
             case CHANNELS.BLOCKCHAIN: // replace the blockchain if receive a valid blockchain
-                this.blockchain.replaceChain(parseMessage, () => {
+                this.blockchain.replaceChain(parseMessage, true, () => {
                     this.transactionPool.clearBlockchainTransactions({
                         chain: parseMessage
                     });
