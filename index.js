@@ -8,21 +8,26 @@ const TransactionMiner = require('./app/transaction-miner');
 const TransactionPool = require('./wallet/transaction-pool');
 const Walllet = require('./wallet/index');
 
-// express object to get request
-const app = express();
-const blockchain = new Blockchain();
-const wallet = new Walllet();
-const transactionPool = new TransactionPool();
-const pubsub = new PubSub({ blockchain, transactionPool });
-const transactionMiner = new TransactionMiner({ blockchain, transactionPool, wallet, pubsub });
+const isDevelopment = process.env.ENV === 'development';
+const REDIS_URL = isDevelopment ?
+    'redis://127.0.0.1:6379':
+    'redis://h:p1a8c46483fc0d6a06278441199df3fa9a4e2de59ed0f0a5955b4fb73667a032e@ec2-18-233-35-75.compute-1.amazonaws.com:10789'
 
 // root node address
 const DEFAULT_PORT = 3000;
 const ROOT_NODE_ADDRESS = `http://localhost:${DEFAULT_PORT}`;
 
+// express object to get request
+const app = express();
+const blockchain = new Blockchain();
+const wallet = new Walllet();
+const transactionPool = new TransactionPool();
+const pubsub = new PubSub({ blockchain, transactionPool, redisUrl: REDIS_URL });
+const transactionMiner = new TransactionMiner({ blockchain, transactionPool, wallet, pubsub });
+
 app.use(bodyParser.json());
 // adding middleware to allow access to all js files
-app.use(express.static(path.join(__dirname, 'client')));
+app.use(express.static(path.join(__dirname, 'client/dist')));
 
 // get response
 app.get('/api/blocks', (req, res) => {
@@ -51,14 +56,9 @@ app.get('/api/wallet-info', (req, res) => {
     });
 });
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname,'client/dist/index.html'));
-});
-
 // create transaction
 app.post('/api/transact', (req, res) => {
     const { amount, recipient } = req.body;
-
     let transaction = transactionPool
         .existingTransaction({ inputAddress: wallet.publicKey });
 
@@ -94,6 +94,10 @@ app.get('/api/mine-transactions', (req, res) => {
     res.redirect('/api/blocks');
 });
 
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname,'client/dist/index.html'));
+});
+
 // sync with root chain
 const syncWithRootState = () => {
     request({ url: `${ROOT_NODE_ADDRESS}/api/blocks` }, ( error, response, body ) => {
@@ -120,13 +124,54 @@ const syncWithRootState = () => {
     });
 };
 
+// only run in development mode
+if(isDevelopment){
+    const walletFoo = new Walllet();
+    const walletBar = new Walllet();
+
+    const generateWalletTransaction = ({ wallet, recipient, amount}) => {
+        const transaction = wallet.createTransaction({
+            recipient, amount, chain: blockchain.chain
+        });
+
+        transactionPool.setTransaction(transaction);
+    };
+
+    const walletAction = () => generateWalletTransaction({
+        wallet, recipient: walletFoo.publicKey, amount: 5
+    });
+
+    const walletFooAction = () => generateWalletTransaction({
+        wallet: walletFoo, recipient: walletBar.publicKey, amount: 10
+    });
+
+    const walletBarAction = () => generateWalletTransaction({
+        wallet: walletBar, recipient: wallet.publicKey, amount: 15
+    });
+
+    for(let i=0; i<10; i++){
+        if(i%3 === 0){
+            walletAction();
+            walletFooAction();
+        }else if(i%3 === 1){
+            walletAction();
+            walletBarAction();
+        }else{
+            walletFooAction();
+            walletBarAction();
+        }
+
+        transactionMiner.mineTransactions();
+    }
+}
+
 let PEER_PORT;
 // generate random peer port starting from 3000 - 4000
 if(process.env.GENERATE_PEER_PORT === 'true'){
     PEER_PORT = DEFAULT_PORT + Math.ceil(Math.random() * 1000);
 }
 
-const PORT = PEER_PORT || DEFAULT_PORT;
+const PORT = process.env.PORT || PEER_PORT || DEFAULT_PORT;
 // listen to local host 3000
 app.listen(PORT, () => {
     console.log(`listening at localhost:${PORT}`);
