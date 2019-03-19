@@ -1,0 +1,55 @@
+// install jest for unit testing
+npm i jest@23.6.0 --save-dev
+// hex to binary
+npm i hex-to-binary@1.0.1 --save
+// install express
+npm i express@4.16.3 --save
+// install nodemone to run the app automatically
+npm i nodemon@1.18.4 --save-dev
+// enhancement to express to parse JSON data
+npm i body-parser@1.18.3 --save
+// install redis for pubsub
+npm i redis@2.8.0 --save
+// launch redis server
+redis-server --daemonize yes
+// handle the crossplatform issue to generate unique port for different instances
+npm install cross-env@5.2.0 --save-dev
+// sync with root blockchain
+npm i request@2.88.0 --save
+// install elliptic
+npm i elliptic@6.4.1 --save
+// unique id 
+npm i uuid@3.3.2 --save
+// install react
+npm i react@16.6.0 react-dom@16.6.0 --save
+// bundler
+npm i parcel-bundler@1.10.3 --save
+// install babel compiler
+npm i babel-core@6.26.3 babel-plugin-transform-class-properties@6.24.1 babel-plugin-transform-object-rest-spread@6.26.0 babel-preset-env@1.7.0 babel-preset-react@6.24.1
+// babel run command .babelrc
+// install react bootstrap
+npm i react-bootstrap@0.32.4 --save
+// install react router
+npm i react-router-dom@4.3.1 --save
+// install history for browser history
+npm i history@4.7.2 --save
+##################################################################
+// heroku deployment
+npm install -g heroku
+heroku login
+// add redis in heroku
+heroku addons:create heroku-redis:hobby-dev -a mycrypto-blockchain
+// check the redis addon status
+heroku addons:info redis-lively-xxx
+// get redis config info
+heroku config | grep REDIS
+// deploy to heroku
+git add -
+git commit -m "Production Code"
+heroku git:remote -a xxxx
+git push heroku master
+// check the log
+heroku logs --tail
+// heroku git & deploy another app
+git remote -v
+git clone git@xxxx
